@@ -31,6 +31,7 @@ with open(
 requirements = [
     'anyblok',
     'pika',
+    'marshmallow',
 ]
 
 setup(
