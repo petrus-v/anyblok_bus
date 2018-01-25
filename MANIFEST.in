@@ -1,0 +1,2 @@
+include doc/*.rst
+recursive-include anyblok_bus/bloks */*.rst
