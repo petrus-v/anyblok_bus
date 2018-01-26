@@ -8,6 +8,7 @@
 from anyblok.tests.testcase import DBTestCase
 from anyblok_bus.validator import bus_validator, SchemaException
 from marshmallow import Schema, fields
+from json import dumps
 from anyblok import Declarations
 
 
@@ -41,7 +42,9 @@ class TestValidator(DBTestCase):
 
             @classmethod
             def decorated_method(cls, body=None):
-                return super(Test, cls).decorated_method(body=body)
+                res = super(Test, cls).decorated_method(body=body)
+                res.update(dict(foo='bar'))
+                return res
 
     def add_in_registry_on_core(self, schema=None):
 
@@ -57,7 +60,9 @@ class TestValidator(DBTestCase):
 
             @classmethod
             def decorated_method(cls, body=None):
-                return super(Test, cls).decorated_method(body=body)
+                res = super(Test, cls).decorated_method(body=body)
+                res.update(dict(foo='bar'))
+                return res
 
     def test_whithout_schema(self):
         with self.assertRaises(SchemaException):
@@ -72,33 +77,33 @@ class TestValidator(DBTestCase):
             self.init_registry(self.add_in_registry, schema=WrongSchema)
 
     def test_schema_ok(self):
-        registry = self.init_registry(self.add_in_registry, schema=OneSchema)
+        registry = self.init_registry(self.add_in_registry, schema=OneSchema())
         self.assertEqual(
             registry.Test.decorated_method(
-                body={'label': 'test', 'number': '1'}),
+                body=dumps({'label': 'test', 'number': '1'})),
             {'label': 'test', 'number': 1}
         )
 
     def test_schema_ko(self):
-        registry = self.init_registry(self.add_in_registry, schema=OneSchema)
+        registry = self.init_registry(self.add_in_registry, schema=OneSchema())
         with self.assertRaises(SchemaException):
             registry.Test.decorated_method(
-                body={'label': 'test', 'number': 'other'})
+                body=dumps({'label': 'test', 'number': 'other'}))
 
     def test_schema_ok_on_mixin(self):
         registry = self.init_registry(self.add_in_registry_on_mixin,
-                                      schema=OneSchema)
+                                      schema=OneSchema())
         self.assertEqual(
             registry.Test.decorated_method(
-                body={'label': 'test', 'number': '1'}),
-            {'label': 'test', 'number': 1}
+                body=dumps({'label': 'test', 'number': '1'})),
+            {'label': 'test', 'number': 1, 'foo': 'bar'}
         )
 
     def test_schema_ok_on_core(self):
         registry = self.init_registry(self.add_in_registry_on_core,
-                                      schema=OneSchema)
+                                      schema=OneSchema())
         self.assertEqual(
             registry.Test.decorated_method(
-                body={'label': 'test', 'number': '1'}),
-            {'label': 'test', 'number': 1}
+                body=dumps({'label': 'test', 'number': '1'})),
+            {'label': 'test', 'number': 1, 'foo': 'bar'}
         )

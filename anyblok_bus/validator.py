@@ -7,6 +7,7 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok.common import add_autodocs
 from anyblok.model.plugins import ModelPluginBase
+from json import loads
 
 
 class SchemaException(Exception):
@@ -32,4 +33,58 @@ def bus_validator(schema=None):
 
 
 class ValidatorPlugin(ModelPluginBase):
-    pass
+    """``anyblok.model.plugin`` to allow the build of the
+    ``anyblok_bus.bus_validator``
+    """
+
+    def initialisation_tranformation_properties(self, properties,
+                                                transformation_properties):
+        """ Initialise the transform properties
+
+        :param properties: the properties declared in the model
+        :param new_type_properties: param to add in a new base if need
+        """
+        if 'bus_validators' not in transformation_properties:
+            transformation_properties['bus_validators'] = {}
+
+    def transform_base_attribute(self, attr, method, namespace, base,
+                                 transformation_properties,
+                                 new_type_properties):
+        """ transform the attribute for the final Model
+
+        :param attr: attribute name
+        :param method: method pointer of the attribute
+        :param namespace: the namespace of the model
+        :param base: One of the base of the model
+        :param transformation_properties: the properties of the model
+        :param new_type_properties: param to add in a new base if need
+        """
+        tp = transformation_properties
+        if hasattr(method, 'is_a_bus_validator') and method.is_a_bus_validator:
+            tp['bus_validators'][attr] = method.schema
+
+    def insert_in_bases(self, new_base, namespace, properties,
+                        transformation_properties):
+        """Insert in a base the overload
+
+        :param new_base: the base to be put on front of all bases
+        :param namespace: the namespace of the model
+        :param properties: the properties declared in the model
+        :param transformation_properties: the properties of the model
+        """
+        for validator in transformation_properties['bus_validators']:
+
+            def wrapper(cls, body=None):
+                schema = transformation_properties['bus_validators'][validator]
+                res = schema.load(loads(body))
+                data, error = res.data, res.errors
+                if error:
+                    raise SchemaException(
+                        'Bad Schema validation with error: %r',
+                        error
+                    )
+
+                return getattr(super(new_base, cls), validator)(body=data)
+
+            wrapper.__name__ = validator
+            setattr(new_base, validator, classmethod(wrapper))
