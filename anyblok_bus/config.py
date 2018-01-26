@@ -34,7 +34,7 @@ except ImportError:
     pass
 
 
-@Configuration.add('bus', label="Bus - broker options",
+@Configuration.add('bus', label="Bus - options",
                    must_be_loaded_by_unittest=True)
 def define_bus_broker(group):
     group.add_argument('--bus-profile',
