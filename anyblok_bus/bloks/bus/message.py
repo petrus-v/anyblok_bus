@@ -7,16 +7,13 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 
 from anyblok import Declarations
-from anyblok.column import Integer, String, Selection, LargeBinary
+from anyblok.column import Integer, String, Selection, LargeBinary, Text
 from anyblok.config import Configuration
 from base64 import b64decode
 import logging
 import pika
 
 logger = logging.getLogger(__name__)
-
-import pdb
-pdb.set_trace()
 
 Bus = Declarations.Model.Bus
 
@@ -27,7 +24,7 @@ class Message:
     MESSAGE_TYPE = None
 
     id = Integer(primary_key=True)
-    content_type = String(nullable=False)
+    content_type = String(default='application/json', nullable=False)
     message = LargeBinary(nullable=False)
     type = Selection(
         selections={
@@ -36,7 +33,8 @@ class Message:
         },
         nullable=False
     )
-    # TODO : gérer l'ordre des messages par une séquence
+    sequence = Integer(default=100, nullable=False)
+    error = Text()
 
     @classmethod
     def define_mapper_args(cls):
@@ -73,17 +71,8 @@ class Consumer(Bus.Message):
         foreign_key=Bus.Message.use('id').options(ondelete='cascade'),
     )
     queue = String(nullable=False)
-
-    # TODO: add method to call when consuming ?
-
-    """
-    def receive(self, profile_name, callback):
-        profile = self.get_profile(profile_name)
-        _connection = self.init_connection(profile)
-        channel = _connection.channel()
-        channel.queue_declare(queue=self.queue)
-        channel.basic_consume(callback, queue=self.queue, no_ack=True)
-    """
+    model = String(nullable=False)
+    method = String(nullable=False)
 
 
 @Declarations.register(Bus.Message)

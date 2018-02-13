@@ -6,7 +6,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok.config import Configuration
-from anyblok_bus.bloks.bus.message import Message
+from anyblok_bus.status import MessageStatus
 from logging import getLogger
 from pika import SelectConnection, URLParameters
 
@@ -17,10 +17,11 @@ class Worker:
 
     def __init__(self, registry, profile):
         self.registry = registry
-        self.profile = profile
+        self.profile = self.registry.Bus.Profile.query().filter_by(name=profile).one()
         self._connection = None
         self._channel = None
         self._closing = False
+        self._consumer_tags = []
 
     def connect(self):
         """ Creating connection object """
@@ -48,6 +49,8 @@ class Worker:
 
     def on_connection_open(self, *a):
         """ Called when we are fully connected to RabbitMQ """
+        self.profile.state = 'connected'
+        self.registry.commit()
         self._connection.add_on_close_callback(self.on_connection_closed)
         self._connection.channel(on_open_callback=self.on_channel_open)
         logger.info('Connexion opened')
@@ -84,6 +87,55 @@ class Worker:
             self._connection.add_timeout(5, self.reconnect)
 
     def declare_consumer(self, queue, model, method):
+
+        def on_message(unused_channel, basic_deliver, properties, body):
+            logger.info(
+                'received on %r tag %r', queue, basic_deliver.delivery_tag
+            )
+            self.registry.rollback()
+            error = ""
+            try:
+                status = getattr(model, method)(body=body.decode('utf-8'))
+            except Exception as e:
+                self.registry.rollback()
+                status = MessageStatus.ERROR
+                error = str(e)
+
+            if status is MessageStatus.ACK:
+                self._channel.basic_ack(basic_deliver.delivery_tag)
+                logger.info('ack queue %s tag %r',
+                            queue, basic_deliver.delivery_tag)
+            elif status is MessageStatus.NACK:
+                self._channel.basic_nack(basic_deliver.delivery_tag)
+                logger.info('nack queue %s tag %r',
+                            queue, basic_deliver.delivery_tag)
+            elif status is MessageStatus.REJECT:
+                self._channel.basic_reject(basic_deliver.delivery_tag)
+                logger.info('reject queue %s tag %r',
+                            queue, basic_deliver.delivery_tag)
+            elif status is MessageStatus.ERROR or status is None:
+                self.registry.Bus.Message.Consumer.insert(
+                    content_type=properties.content_type,
+                    message=body,
+                    queue=queue,
+                    model=model.__registry_name__,
+                    method=method,
+                    error=error,
+                    sequence=basic_deliver.delivery_tag,
+                )
+                self._channel.basic_ack(basic_deliver.delivery_tag)
+                logger.info('save message of the queue %s tag %r',
+                            queue, basic_deliver.delivery_tag)
+
+            self.registry.commit()
+
+        self._consumer_tags.append(
+            self._channel.basic_consume(
+                on_message,
+                queue=queue,
+                arguments=dict(model=model.__registry_name__, method=method)
+            )
+        )
         return True
 
     def start(self):
