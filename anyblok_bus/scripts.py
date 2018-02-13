@@ -31,7 +31,6 @@ def bus_worker_process(worker_id, logging_fd):
         if registry is None:
             logger.critical("No registry found for %s", db_name)
             return os._exit(4)
-
         worker = Worker(registry)
         worker.start()
     except ImportError as e:
