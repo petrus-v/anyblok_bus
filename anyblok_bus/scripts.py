@@ -27,7 +27,7 @@ def bus_worker_process(worker_id, logging_fd):
     try:
         logging_pipe = os.fdopen(logging_fd, "w")
         BlokManager.load()
-        registry = RegistryManager.get(db_name)
+        registry = RegistryManager.get(db_name, loadwithoutmigration=True)
         if registry is None:
             logger.critical("No registry found for %s", db_name)
             return os._exit(4)

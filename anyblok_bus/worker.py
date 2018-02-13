@@ -61,7 +61,7 @@ class Worker:
         # d'après la doc pika : on déclare un exchange, puis lorsque l'exchange est ok,
         # on déclare une queue, lorsque la queue est ok on met en place lien entre la queue et l'exchange,
         # enfin on démarre la "consommation" de la queue
-        for queue, model, method in self.registry.Consumer.query().all():
+        for queue, model, method in self.registry.Bus.Profile.get_consumers():
             self.declare_consumer(queue, model, method)
 
     def on_channel_closed(self, channel, reply_code, reply_text):
@@ -84,7 +84,7 @@ class Worker:
             self._connection.add_timeout(5, self.reconnect)
 
     def declare_consumer(self, queue, model, method):
-
+        return True
 
     def start(self):
         """ Creating connection object and starting event loop """
