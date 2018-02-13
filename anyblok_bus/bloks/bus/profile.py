@@ -46,10 +46,8 @@ class Profile:
     @classmethod
     def get_consumers(cls):
         # (queue name, model, method name)
-        import pdb
-        pdb.set_trace()
         return [
-            ('blok_%s_ping' % cls.env.cr.dbname, cls.name, 'ping'),
+            ('blok_%s_ping' % cls.registry.db_name, cls, 'ping'),
         ]
 
     @bus_validator(PingSchema())

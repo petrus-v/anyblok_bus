@@ -24,6 +24,7 @@ def bus_worker_process(worker_id, logging_fd):
     """consume worker to process messages and execute the actor"""
     # TODO preload registries
     db_name = Configuration.get('db_name')
+    profile = Configuration.get('bus_profile')
     try:
         logging_pipe = os.fdopen(logging_fd, "w")
         BlokManager.load()
@@ -31,7 +32,7 @@ def bus_worker_process(worker_id, logging_fd):
         if registry is None:
             logger.critical("No registry found for %s", db_name)
             return os._exit(4)
-        worker = Worker(registry)
+        worker = Worker(registry, profile)
         worker.start()
     except ImportError as e:
         logger.critical(e)

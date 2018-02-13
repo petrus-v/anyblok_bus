@@ -6,7 +6,6 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok.config import Configuration
-from anyblok_bus.bloks.bus.message import Message
 from logging import getLogger
 from pika import SelectConnection, URLParameters
 
@@ -17,7 +16,7 @@ class Worker:
 
     def __init__(self, registry, profile):
         self.registry = registry
-        self.profile = profile
+        self.profile = self.registry.Bus.Profile.query().filter_by(name=profile).one()
         self._connection = None
         self._channel = None
         self._closing = False

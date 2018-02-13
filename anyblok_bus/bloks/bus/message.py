@@ -15,9 +15,6 @@ import pika
 
 logger = logging.getLogger(__name__)
 
-import pdb
-pdb.set_trace()
-
 Bus = Declarations.Model.Bus
 
 
