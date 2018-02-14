@@ -138,6 +138,18 @@ class Worker:
         )
         return True
 
+    def stop_consuming(self):
+        """ Set profile's state to 'disconnected' and cancels every related consumers"""
+        self.profile.state = 'disconnected'
+        self.registry.commit()
+        if self._channel:
+            for consumer_tag in self._consumer_tags:
+                self._channel.basic_cancel(self.on_cancelok, consumer_tag)
+
+    def on_cancelok(self, unused_frame):
+        logger.info('RabbitMQ acknowledged the cancellation of the consumer')
+        self._channel.close()
+
     def start(self):
         """ Creating connection object and starting event loop """
         logger.info('start')
@@ -146,3 +158,5 @@ class Worker:
 
     def stop(self):
         logger.info('stop')
+        self._closing = True
+        self.stop_consuming()
