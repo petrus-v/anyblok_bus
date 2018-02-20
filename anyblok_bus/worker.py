@@ -5,7 +5,6 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
-from anyblok.config import Configuration
 from anyblok_bus.status import MessageStatus
 from logging import getLogger
 from pika import SelectConnection, URLParameters
@@ -17,7 +16,9 @@ class Worker:
 
     def __init__(self, registry, profile):
         self.registry = registry
-        self.profile = self.registry.Bus.Profile.query().filter_by(name=profile).one()
+        self.profile = self.registry.Bus.Profile.query().filter_by(
+            name=profile
+        ).one()
         self._connection = None
         self._channel = None
         self._closing = False
@@ -36,9 +37,7 @@ class Worker:
     def reconnect(self):
         self._connection.ioloop.stop()
         if not self._closing:
-            # TODO: use start() method ?
-            self._connection = self.connect()
-            self._connection.ioloop.start()
+            self.start()
 
     def get_url(self):
         """ Retrieve connection url """
@@ -60,10 +59,6 @@ class Worker:
         logger.info('Channel opened')
         self._channel = channel
         self._channel.add_on_close_callback(self.on_channel_closed)
-        # TODO: adapter cette partie au fonctionnement souhaitée
-        # d'après la doc pika : on déclare un exchange, puis lorsque l'exchange est ok,
-        # on déclare une queue, lorsque la queue est ok on met en place lien entre la queue et l'exchange,
-        # enfin on démarre la "consommation" de la queue
         for queue, model, method in self.registry.Bus.Profile.get_consumers():
             self.declare_consumer(queue, model, method)
 
@@ -75,7 +70,7 @@ class Worker:
         self._connection.close()
 
     def on_connection_closed(self, connection, reply_code, reply_text):
-        """ Called when connection is closed """
+        """ Called when connection is closed by the server """
         self._channel = None
         if self._closing:
             self._connection.ioloop.stop()
@@ -139,7 +134,9 @@ class Worker:
         return True
 
     def stop_consuming(self):
-        """ Set profile's state to 'disconnected' and cancels every related consumers"""
+        """ Set profile's state to 'disconnected' and cancels every related
+            consumers
+        """
         self.profile.state = 'disconnected'
         self.registry.commit()
         if self._channel:
