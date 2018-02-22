@@ -47,7 +47,7 @@ class Message:
 
     def get_profile(self, profile_name):
         try:
-            profile = self.registry.Profile.query().filter_by(
+            profile = self.registry.Bus.Profile.query().filter_by(
                 name=profile_name
             ).one()
         except:
@@ -59,6 +59,12 @@ class Message:
     def init_connection(self, profile):
         parameters = pika.URLParameters(profile.url)
         return pika.BlockingConnection(parameters)
+
+    def new_confirm_delivery_channel(self, profile):
+        _connection = self.init_connection(profile)
+        channel = _connection.channel()
+        channel.confirm_delivery()
+        return channel
 
 
 @Declarations.register(Bus.Message)
@@ -92,9 +98,7 @@ class Producer(Bus.Message):
         profile_name = Configuration.get('bus_profile')
         profile = self.get_profile(profile_name)
         message = b64decode(self.message)
-        _connection = self.init_connection(profile)
-        channel = _connection.channel()
-        channel.confirm_delivery()
+        channel = self.new_confirm_delivery_channel(profile)
         if channel.basic_publish(
             exchange=self.exchange,
             routing_key=self.routing_key,
@@ -104,8 +108,8 @@ class Producer(Bus.Message):
             )
         ):
             logger.info("Message published %r", self)
-            self.unlink()
+            self.delete()
             # if for obscure raison the message can be deleted
             # then the message that dont break all
         else:
-            raise Exception("Can publish message")
+            raise Exception("Message cannot be published")
