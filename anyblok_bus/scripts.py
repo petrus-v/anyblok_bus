@@ -5,19 +5,25 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
-import sys
 import os
 import signal
 import time
-from anyblok.scripts import format_configuration
 from anyblok import load_init_function_from_entry_points
 from anyblok.config import Configuration
 from anyblok.blok import BlokManager
 from anyblok.registry import RegistryManager
 from .worker import Worker
+from .release import version
 from logging import getLogger
 
 logger = getLogger(__name__)
+
+
+Configuration.add_application_properties(
+    'bus', ['logging', 'bus'],
+    prog='Bus app for AnyBlok, version %r' % version,
+    description='Bus for AnyBlok',
+)
 
 
 def bus_worker_process(worker_id, logging_fd):
@@ -64,18 +70,15 @@ def bus_worker_process(worker_id, logging_fd):
     logging_pipe.close()
 
 
-def bus(application, configuration_groups, **kwargs):
+def anyblok_bus():
     """Run consumer workers process to consume queue
 
     :param application: name of the application
     :param configuration_groups: list configuration groupe to load
     :param \**kwargs: ArgumentParser named arguments
     """
-    format_configuration(configuration_groups,
-                         'dramatiq-broker', 'dramatiq-consumer')
     load_init_function_from_entry_points()
-    Configuration.load(application, configuration_groups=configuration_groups,
-                       **kwargs)
+    Configuration.load('bus')
 
     worker_pipes = []
     worker_processes = []
@@ -120,7 +123,3 @@ def bus(application, configuration_groups, **kwargs):
         pipe.close()
 
     return retcode
-
-
-def anyblok_bus():
-    sys.exit(bus('bus', ['logging']))

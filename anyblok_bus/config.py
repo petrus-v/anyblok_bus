@@ -6,32 +6,18 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok.config import Configuration
-from .release import version
 import os
 
 
-Configuration.applications.update({
-    'bus': {
-        'prog': 'Bus app for AnyBlok, version %r' % version,
-        'description': 'Bus for AnyBlok',
-        'configuration_groups': ['bus', 'config', 'database'],
-    },
-})
+Configuration.add_application_properties('createdb', ['bus'])
+Configuration.add_application_properties('updatedb', ['bus'])
+Configuration.add_application_properties('nose', ['bus'])
+Configuration.add_application_properties('interpreter', ['bus'])
+Configuration.add_application_properties('default', ['bus'])
 
-
-Configuration.add_configuration_groups('createdb', ['bus'])
-Configuration.add_configuration_groups('updatedb', ['bus'])
-Configuration.add_configuration_groups('nose', ['bus'])
-Configuration.add_configuration_groups('interpreter', ['bus'])
-Configuration.add_configuration_groups('default', ['bus'])
-
-try:
-    # import the configuration to get application
-    import anyblok_pyramid.config  # noqa
-    Configuration.add_configuration_groups('pyramid', ['bus'])
-    Configuration.add_configuration_groups('gunicorn', ['bus'])
-except ImportError:
-    pass
+Configuration.add_application_properties('pyramid', ['bus'])
+Configuration.add_application_properties('gunicorn', ['bus'],
+                                         add_default_group=False)
 
 
 @Configuration.add(
