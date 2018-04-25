@@ -76,13 +76,7 @@ class ValidatorPlugin(ModelPluginBase):
 
             def wrapper(cls, body=None):
                 schema = transformation_properties['bus_validators'][validator]
-                res = schema.load(loads(body))
-                data, error = res.data, res.errors
-                if error:
-                    raise SchemaException(
-                        'Bad Schema validation with error: %r',
-                        error
-                    )
+                data = schema.load(loads(body))
 
                 return getattr(super(new_base, cls), validator)(body=data)
 
