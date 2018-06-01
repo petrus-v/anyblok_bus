@@ -109,7 +109,7 @@ class Worker:
                 logger.info('reject queue %s tag %r',
                             queue, basic_deliver.delivery_tag)
             elif status is MessageStatus.ERROR or status is None:
-                self.registry.Bus.Message.Consumer.insert(
+                self.registry.Bus.Message.insert(
                     content_type=properties.content_type,
                     message=body,
                     queue=queue,

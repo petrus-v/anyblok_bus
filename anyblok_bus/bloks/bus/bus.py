@@ -6,6 +6,11 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok import Declarations
+from anyblok.config import Configuration
+import logging
+import pika
+
+logger = logging.getLogger(__name__)
 
 
 @Declarations.register(Declarations.Model)
@@ -14,25 +19,36 @@ class Bus:
 
     @classmethod
     def publish(cls, exchange, routing_key, data, contenttype):
-        Message = cls.registry.Bus.Message.Producer
-        query = Message.query().order_by(Message.sequence.desc())
-        last_message = query.limit(1).one_or_none()
-        message = Message.insert(
-            exchange=exchange,
-            routing_key=routing_key,
-            content_type=contenttype,
-            message=data
-        )
-
-        if last_message:
-            message.sequence = last_message.sequence + 1
-
-        for m in Message.query().all():
-            try:
-                with cls.registry.begin_nested():  # savepoint
-                    message = Message.query().with_for_update(
-                        nowait=True).get(m.id)
-                    message.publish()
-
-            except:
-                pass
+        profile_name = Configuration.get('bus_profile')
+        try:
+            with cls.registry.begin_nested():  # savepoint
+                profile = cls.registry.Bus.Profile.query().filter_by(
+                    name=profile_name
+                ).one_or_none()
+                parameters = pika.URLParameters(profile.url)
+                _connection = pika.BlockingConnection(parameters)
+                channel = _connection.channel()
+                channel.confirm_delivery()
+                if channel.basic_publish(
+                    exchange=exchange,
+                    routing_key=routing_key,
+                    body=data,
+                    properties=pika.BasicProperties(
+                        content_type=contenttype, delivery_mode=1)
+                ):
+                    logger.info("Message published %r->%r",
+                                exchange, routing_key)
+                else:
+                    raise Exception("Message cannot be published")
+        except Exception as e:
+            logger.error("publishing failed with : %r", e)
+            raise
+        finally:
+            if channel and not channel.is_closed and not channel.is_closing:
+                channel.close()
+            if (
+                _connection and
+                not _connection.is_closed and
+                not _connection.is_closing
+            ):
+                _connection.close()
