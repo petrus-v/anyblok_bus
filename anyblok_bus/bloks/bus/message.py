@@ -30,20 +30,21 @@ class Message:
         error = ""
         try:
             Model = self.registry.get(self.model)
-            status = getattr(Model, self.method)(body=self.message)
+            status = getattr(Model, self.method)(
+                body=self.message.decode('utf-8'))
         except Exception as e:
             status = MessageStatus.ERROR
             error = str(e)
 
         if status is MessageStatus.ERROR or status is None:
-            logger.info('%s Finished %s an error %r', self, error)
+            logger.info('%s Finished with an error %r', self, error)
             self.error = error
         else:
             self.delete()
 
     @classmethod
     def consume_all(cls):
-        query = cls.query().order(cls.sequence)
+        query = cls.query().order_by(cls.sequence)
         for consumer in query.all():
             with cls.registry.begin_nested():  # savepoint
                 consumer.consume()
