@@ -14,11 +14,18 @@ class SchemaException(Exception):
     """Simple exception if error with Schema"""
 
 
-def bus_validator(schema=None):
+class BusConfigurationException(Exception):
+    """Simple exception if error with Schema"""
+
+
+def bus_validator(name=None, schema=None):
     autodoc = "Schema validator %(schema)r" % dict(schema=schema)
 
     if schema is None:
         raise SchemaException("No existing schema")
+
+    if name is None:
+        raise BusConfigurationException("No consumer name")
 
     if not hasattr(schema, 'load'):
         raise SchemaException("Schema %r have not load method" % schema)
@@ -27,6 +34,7 @@ def bus_validator(schema=None):
         add_autodocs(method, autodoc)
         method.is_a_bus_validator = True
         method.schema = schema
+        method.consumer_name = name
         return classmethod(method)
 
     return wrapper
@@ -44,8 +52,12 @@ class ValidatorPlugin(ModelPluginBase):
         :param properties: the properties declared in the model
         :param new_type_properties: param to add in a new base if need
         """
+        self.consumers = []
         if 'bus_validators' not in transformation_properties:
             transformation_properties['bus_validators'] = {}
+
+        if not hasattr(self.registry, 'bus_consumers'):
+            self.registry.bus_consumers = {}
 
     def transform_base_attribute(self, attr, method, namespace, base,
                                  transformation_properties,
@@ -61,7 +73,16 @@ class ValidatorPlugin(ModelPluginBase):
         """
         tp = transformation_properties
         if hasattr(method, 'is_a_bus_validator') and method.is_a_bus_validator:
-            tp['bus_validators'][attr] = method.schema
+            tp['bus_validators'][attr] = (method.consumer_name, method.schema)
+            if method.consumer_name in self.registry.bus_consumers:
+                raise BusConfigurationException(
+                    "The consumer already defined %s " % method.consumer_name)
+
+            if method.consumer_name in self.consumers:
+                raise BusConfigurationException(
+                    "The consumer already defined %s " % method.consumer_name)
+
+            self.consumers.append(method.consumer_name)
 
     def insert_in_bases(self, new_base, namespace, properties,
                         transformation_properties):
@@ -75,16 +96,22 @@ class ValidatorPlugin(ModelPluginBase):
         for validator in transformation_properties['bus_validators']:
 
             def wrapper(cls, body=None):
-                schema = transformation_properties['bus_validators'][validator]
-                res = schema.load(loads(body))
-                data, error = res.data, res.errors
-                if error:
-                    raise SchemaException(
-                        'Bad Schema validation with error: %r',
-                        error
-                    )
-
+                schema = transformation_properties['bus_validators'][validator][
+                    1]
+                data = schema.load(loads(body))
                 return getattr(super(new_base, cls), validator)(body=data)
 
             wrapper.__name__ = validator
             setattr(new_base, validator, classmethod(wrapper))
+
+    def after_model_construction(self, base, namespace,
+                                 transformation_properties):
+        """Do some action with the constructed Model
+
+        :param base: the Model class
+        :param namespace: the namespace of the model
+        :param transformation_properties: the properties of the model
+        """
+        for attr in transformation_properties['bus_validators']:
+            name, schema = transformation_properties['bus_validators'][attr]
+            self.registry.bus_consumers[name] = (name, base, attr)

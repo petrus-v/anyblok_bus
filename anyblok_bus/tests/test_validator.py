@@ -6,10 +6,12 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok.tests.testcase import DBTestCase
-from anyblok_bus.validator import bus_validator, SchemaException
+from anyblok_bus.validator import (
+    bus_validator, SchemaException, BusConfigurationException)
 from marshmallow import Schema, fields
 from json import dumps
 from anyblok import Declarations
+from marshmallow.exceptions import ValidationError
 
 
 class OneSchema(Schema):
@@ -24,45 +26,9 @@ class TestValidator(DBTestCase):
         @Declarations.register(Declarations.Model)
         class Test:
 
-            @bus_validator(schema=schema)
+            @bus_validator(name='test', schema=schema)
             def decorated_method(cls, body=None):
                 return body
-
-    def add_in_registry_on_mixin(self, schema=None):
-
-        @Declarations.register(Declarations.Mixin)
-        class TMixin:
-
-            @bus_validator(schema=schema)
-            def decorated_method(cls, body=None):
-                return body
-
-        @Declarations.register(Declarations.Model)
-        class Test(Declarations.Mixin.TMixin):
-
-            @classmethod
-            def decorated_method(cls, body=None):
-                res = super(Test, cls).decorated_method(body=body)
-                res.update(dict(foo='bar'))
-                return res
-
-    def add_in_registry_on_core(self, schema=None):
-
-        @Declarations.register(Declarations.Core)
-        class Base:
-
-            @bus_validator(schema=schema)
-            def decorated_method(cls, body=None):
-                return body
-
-        @Declarations.register(Declarations.Model)
-        class Test:
-
-            @classmethod
-            def decorated_method(cls, body=None):
-                res = super(Test, cls).decorated_method(body=body)
-                res.update(dict(foo='bar'))
-                return res
 
     def test_whithout_schema(self):
         with self.assertRaises(SchemaException):
@@ -86,24 +52,78 @@ class TestValidator(DBTestCase):
 
     def test_schema_ko(self):
         registry = self.init_registry(self.add_in_registry, schema=OneSchema())
-        with self.assertRaises(SchemaException):
+        with self.assertRaises(ValidationError):
             registry.Test.decorated_method(
                 body=dumps({'label': 'test', 'number': 'other'}))
 
-    def test_schema_ok_on_mixin(self):
-        registry = self.init_registry(self.add_in_registry_on_mixin,
-                                      schema=OneSchema())
-        self.assertEqual(
-            registry.Test.decorated_method(
-                body=dumps({'label': 'test', 'number': '1'})),
-            {'label': 'test', 'number': 1, 'foo': 'bar'}
-        )
+    def test_decorator_without_name(self):
+        def add_in_registry():
+            @Declarations.register(Declarations.Model)
+            class Test:
 
-    def test_schema_ok_on_core(self):
-        registry = self.init_registry(self.add_in_registry_on_core,
-                                      schema=OneSchema())
-        self.assertEqual(
-            registry.Test.decorated_method(
-                body=dumps({'label': 'test', 'number': '1'})),
-            {'label': 'test', 'number': 1, 'foo': 'bar'}
-        )
+                @bus_validator(schema=OneSchema())
+                def decorated_method(cls, body=None):
+                    return body
+
+        with self.assertRaises(BusConfigurationException):
+            self.init_registry(add_in_registry)
+
+    def test_decorator_with_twice_the_same_name(self):
+
+        def add_in_registry():
+            @Declarations.register(Declarations.Model)
+            class Test:
+
+                @bus_validator(name='test', schema=OneSchema())
+                def decorated_method1(cls, body=None):
+                    return body
+
+                @bus_validator(name='test', schema=OneSchema())
+                def decorated_method2(cls, body=None):
+                    return body
+
+        with self.assertRaises(BusConfigurationException):
+            self.init_registry(add_in_registry)
+
+    def test_decorator_with_twice_the_same_name2(self):
+
+        def add_in_registry():
+            @Declarations.register(Declarations.Model)
+            class Test:
+
+                @bus_validator(name='test', schema=OneSchema())
+                def decorated_method(cls, body=None):
+                    return body
+
+            @Declarations.register(Declarations.Model)
+            class Test2:
+
+                @bus_validator(name='test', schema=OneSchema())
+                def decorated_method(cls, body=None):
+                    return body
+
+        with self.assertRaises(BusConfigurationException):
+            self.init_registry(add_in_registry)
+
+    def test_with_two_decorator(self):
+
+        def add_in_registry():
+            @Declarations.register(Declarations.Model)
+            class Test:
+
+                @bus_validator(name='test1', schema=OneSchema())
+                def decorated_method1(cls, body=None):
+                    return body
+
+                @bus_validator(name='test2', schema=OneSchema())
+                def decorated_method2(cls, body=None):
+                    return body
+
+        registry = self.init_registry_with_bloks(('bus',), add_in_registry)
+        self.assertEqual(len(registry.Bus.Profile.get_consumers()), 2)
+
+    def test_consumer_add_in_get_profile(self):
+        registry = self.init_registry_with_bloks(
+            ('bus',), self.add_in_registry, schema=OneSchema())
+        self.assertEqual(registry.Bus.Profile.get_consumers(),
+                         [('test', registry.Test, 'decorated_method')])

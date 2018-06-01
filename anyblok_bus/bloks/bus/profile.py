@@ -7,19 +7,9 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok import Declarations
 from anyblok.column import String, Selection
-from marshmallow import Schema, fields
-from anyblok_bus.status import MessageStatus
-from anyblok_bus.validator import bus_validator
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-class PingSchema(Schema):
-
-    exchange = fields.String(required=True)
-    routing_key = fields.String(required=True)
-    properties = fields.Dict(required=True)
 
 
 @Declarations.register(Declarations.Model.Bus)
@@ -37,20 +27,6 @@ class Profile:
         default='disconnected', nullable=False
     )
 
-    def __str__(self):
-        return "%s %s %s %s" % (self.name, self.description, self.url, self.state)
-
-    def __repr__(self):
-        return "%s %s %s %s" % (self.name, self.description, self.url, self.state)
-
     @classmethod
     def get_consumers(cls):
-        # (queue name, model, method name)
-        return [
-            ('blok_%s_ping' % cls.registry.db_name, cls, 'ping'),
-        ]
-
-    @bus_validator(PingSchema())
-    def ping(self, body=None):
-        logger.info('Received ping with body %s', body)
-        return MessageStatus.ACK
+        return [x for x in cls.registry.bus_consumers.values()]
