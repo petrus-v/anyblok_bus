@@ -6,7 +6,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok.tests.testcase import DBTestCase
-from anyblok_bus.validator import bus_validator
+from anyblok_bus import bus_consumer
 from anyblok.column import Integer, String
 from marshmallow import Schema, fields
 from json import dumps
@@ -131,7 +131,7 @@ class TestConsumer(DBTestCase):
             label = String()
             number = Integer()
 
-            @bus_validator(name='unittest_queue', schema=OneSchema())
+            @bus_consumer(queue_name='unittest_queue', schema=OneSchema())
             def decorated_method(cls, body=None):
                 cls.insert(**body)
                 return MessageStatus.ACK

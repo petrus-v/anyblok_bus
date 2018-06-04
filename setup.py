@@ -54,7 +54,7 @@ setup(
             'bus_config=anyblok_bus:anyblok_init_config',
         ],
         'anyblok.model.plugin': [
-            'bus_validator=anyblok_bus.validator:ValidatorPlugin',
+            'bus_consumer=anyblok_bus.consumer:BusConsumerPlugin',
         ],
     },
     include_package_data=True,

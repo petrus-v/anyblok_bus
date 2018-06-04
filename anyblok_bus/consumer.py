@@ -18,29 +18,29 @@ class BusConfigurationException(Exception):
     """Simple exception if error with Schema"""
 
 
-def bus_validator(name=None, schema=None):
-    autodoc = "Schema validator %(schema)r" % dict(schema=schema)
+def bus_consumer(queue_name=None, schema=None):
+    autodoc = "Consumer: queue %r, schema %r" % (queue_name, schema)
 
     if schema is None:
         raise SchemaException("No existing schema")
 
-    if name is None:
-        raise BusConfigurationException("No consumer name")
+    if queue_name is None:
+        raise BusConfigurationException("No queue name")
 
     if not hasattr(schema, 'load'):
         raise SchemaException("Schema %r have not load method" % schema)
 
     def wrapper(method):
         add_autodocs(method, autodoc)
-        method.is_a_bus_validator = True
+        method.is_a_bus_consumer = True
         method.schema = schema
-        method.consumer_name = name
+        method.queue_name = queue_name
         return classmethod(method)
 
     return wrapper
 
 
-class ValidatorPlugin(ModelPluginBase):
+class BusConsumerPlugin(ModelPluginBase):
     """``anyblok.model.plugin`` to allow the build of the
     ``anyblok_bus.bus_validator``
     """
@@ -52,9 +52,9 @@ class ValidatorPlugin(ModelPluginBase):
         :param properties: the properties declared in the model
         :param new_type_properties: param to add in a new base if need
         """
-        self.consumers = []
-        if 'bus_validators' not in transformation_properties:
-            transformation_properties['bus_validators'] = {}
+        self.queues = []
+        if 'bus_consumers' not in transformation_properties:
+            transformation_properties['bus_consumers'] = {}
 
         if not hasattr(self.registry, 'bus_consumers'):
             self.registry.bus_consumers = {}
@@ -72,17 +72,19 @@ class ValidatorPlugin(ModelPluginBase):
         :param new_type_properties: param to add in a new base if need
         """
         tp = transformation_properties
-        if hasattr(method, 'is_a_bus_validator') and method.is_a_bus_validator:
-            tp['bus_validators'][attr] = (method.consumer_name, method.schema)
-            if method.consumer_name in self.registry.bus_consumers:
+        if hasattr(method, 'is_a_bus_consumer') and method.is_a_bus_consumer:
+            tp['bus_consumers'][attr] = (method.queue_name, method.schema)
+            if method.queue_name in self.registry.bus_consumers:
                 raise BusConfigurationException(
-                    "The consumer already defined %s " % method.consumer_name)
+                    "The consumation of the queue %r is already defined" % (
+                        method.queue_name))
 
-            if method.consumer_name in self.consumers:
+            if method.queue_name in self.queues:
                 raise BusConfigurationException(
-                    "The consumer already defined %s " % method.consumer_name)
+                    "The consumation of the queue %r is already defined" % (
+                        method.queue_name))
 
-            self.consumers.append(method.consumer_name)
+            self.queues.append(method.queue_name)
 
     def insert_in_bases(self, new_base, namespace, properties,
                         transformation_properties):
@@ -93,16 +95,16 @@ class ValidatorPlugin(ModelPluginBase):
         :param properties: the properties declared in the model
         :param transformation_properties: the properties of the model
         """
-        for validator in transformation_properties['bus_validators']:
+        for consumer in transformation_properties['bus_consumers']:
 
             def wrapper(cls, body=None):
-                schema = transformation_properties['bus_validators'][validator][
+                schema = transformation_properties['bus_consumers'][consumer][
                     1]
                 data = schema.load(loads(body))
-                return getattr(super(new_base, cls), validator)(body=data)
+                return getattr(super(new_base, cls), consumer)(body=data)
 
-            wrapper.__name__ = validator
-            setattr(new_base, validator, classmethod(wrapper))
+            wrapper.__name__ = consumer
+            setattr(new_base, consumer, classmethod(wrapper))
 
     def after_model_construction(self, base, namespace,
                                  transformation_properties):
@@ -112,6 +114,6 @@ class ValidatorPlugin(ModelPluginBase):
         :param namespace: the namespace of the model
         :param transformation_properties: the properties of the model
         """
-        for attr in transformation_properties['bus_validators']:
-            name, schema = transformation_properties['bus_validators'][attr]
+        for attr in transformation_properties['bus_consumers']:
+            name, schema = transformation_properties['bus_consumers'][attr]
             self.registry.bus_consumers[name] = (name, base, attr)

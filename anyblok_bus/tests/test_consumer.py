@@ -6,8 +6,8 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok.tests.testcase import DBTestCase
-from anyblok_bus.validator import (
-    bus_validator, SchemaException, BusConfigurationException)
+from anyblok_bus.consumer import (
+    bus_consumer, SchemaException, BusConfigurationException)
 from marshmallow import Schema, fields
 from json import dumps
 from anyblok import Declarations
@@ -26,7 +26,7 @@ class TestValidator(DBTestCase):
         @Declarations.register(Declarations.Model)
         class Test:
 
-            @bus_validator(name='test', schema=schema)
+            @bus_consumer(queue_name='test', schema=schema)
             def decorated_method(cls, body=None):
                 return body
 
@@ -61,7 +61,7 @@ class TestValidator(DBTestCase):
             @Declarations.register(Declarations.Model)
             class Test:
 
-                @bus_validator(schema=OneSchema())
+                @bus_consumer(schema=OneSchema())
                 def decorated_method(cls, body=None):
                     return body
 
@@ -74,11 +74,11 @@ class TestValidator(DBTestCase):
             @Declarations.register(Declarations.Model)
             class Test:
 
-                @bus_validator(name='test', schema=OneSchema())
+                @bus_consumer(queue_name='test', schema=OneSchema())
                 def decorated_method1(cls, body=None):
                     return body
 
-                @bus_validator(name='test', schema=OneSchema())
+                @bus_consumer(queue_name='test', schema=OneSchema())
                 def decorated_method2(cls, body=None):
                     return body
 
@@ -91,14 +91,14 @@ class TestValidator(DBTestCase):
             @Declarations.register(Declarations.Model)
             class Test:
 
-                @bus_validator(name='test', schema=OneSchema())
+                @bus_consumer(queue_name='test', schema=OneSchema())
                 def decorated_method(cls, body=None):
                     return body
 
             @Declarations.register(Declarations.Model)
             class Test2:
 
-                @bus_validator(name='test', schema=OneSchema())
+                @bus_consumer(queue_name='test', schema=OneSchema())
                 def decorated_method(cls, body=None):
                     return body
 
@@ -111,11 +111,11 @@ class TestValidator(DBTestCase):
             @Declarations.register(Declarations.Model)
             class Test:
 
-                @bus_validator(name='test1', schema=OneSchema())
+                @bus_consumer(queue_name='test1', schema=OneSchema())
                 def decorated_method1(cls, body=None):
                     return body
 
-                @bus_validator(name='test2', schema=OneSchema())
+                @bus_consumer(queue_name='test2', schema=OneSchema())
                 def decorated_method2(cls, body=None):
                     return body
 
