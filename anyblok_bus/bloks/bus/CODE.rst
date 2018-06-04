@@ -33,7 +33,7 @@ API doc
 **Message**
 ```````````
 
-.. automodule:: anyblok_bus.bloks.bus.mesaage
+.. automodule:: anyblok_bus.bloks.bus.message
 
 .. autoanyblok-declaration:: Message
     :members:
