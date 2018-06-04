@@ -63,19 +63,6 @@ class TestPublish(DBTestCase):
         env.update(dict(bus_profile=bus_profile))
         super(TestPublish, cls).init_configuration_manager(**env)
 
-    def add_in_registry(self, schema=None):
-
-        @Declarations.register(Declarations.Model)
-        class Test:
-            id = Integer(primary_key=True)
-            label = String()
-            number = Integer()
-
-            @bus_validator(name='test', schema=OneSchema())
-            def decorated_method(cls, body=None):
-                cls.insert(**body)
-                return MessageStatus.ACK
-
     def test_publish_ok(self):
         with get_channel() as channel:
             bus_profile = Configuration.get('bus_profile')
@@ -136,7 +123,7 @@ class TestConsumer(DBTestCase):
         env.update(dict(bus_profile=bus_profile))
         super(TestConsumer, cls).init_configuration_manager(**env)
 
-    def add_in_registry(self, schema=None):
+    def add_in_registry(self):
 
         @Declarations.register(Declarations.Model)
         class Test:
