@@ -19,8 +19,8 @@ API doc
     :show-inheritance:
     :noindex:
 
-**Profile**
-```````````
+**Bus**
+```````
 
 .. automodule:: anyblok_bus.bloks.bus.profile
 

@@ -7,7 +7,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok import Declarations
-from anyblok.column import String, Selection
+from anyblok.column import String, Selection, URL
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Profile:
     name = String(primary_key=True, unique=True, nullable=False)
     description = String()
-    url = String(nullable=False)
+    url = URL(nullable=False)
     state = Selection(
         selections={
             'connected': 'Connected',

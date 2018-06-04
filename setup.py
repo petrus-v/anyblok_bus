@@ -32,6 +32,7 @@ requirements = [
     'anyblok',
     'pika',
     'marshmallow>=3.0.0b8',
+    'furl',
 ]
 
 setup(
