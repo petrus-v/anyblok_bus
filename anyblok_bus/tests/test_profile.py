@@ -116,7 +116,7 @@ class TestPublish(DBTestCase):
 class AnyBlokWorker(Thread):
     def __init__(self, registry, profile):
         super(AnyBlokWorker, self).__init__()
-        self.worker = Worker(registry, profile)
+        self.worker = Worker(registry, profile, withautocommit=False)
 
     def run(self):
         self.worker.start()

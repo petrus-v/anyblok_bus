@@ -14,7 +14,7 @@ logger = getLogger(__name__)
 
 class Worker:
 
-    def __init__(self, registry, profile):
+    def __init__(self, registry, profile, withautocommit=True):
         self.registry = registry
         self.profile = self.registry.Bus.Profile.query().filter_by(
             name=profile
@@ -24,6 +24,7 @@ class Worker:
         self._closing = False
         self._consumer_tags = []
         self.ready = False
+        self.withautocommit = withautocommit
 
     def connect(self):
         """ Creating connection object """
@@ -128,7 +129,8 @@ class Worker:
                 logger.info('save message of the queue %s tag %r',
                             queue, basic_deliver.delivery_tag)
 
-            self.registry.commit()
+            if self.withautocommit:
+                self.registry.commit()
 
         self._consumer_tags.append(
             self._channel.basic_consume(
@@ -149,13 +151,28 @@ class Worker:
             for consumer_tag in self._consumer_tags:
                 self._channel.basic_cancel(self.on_cancelok, consumer_tag)
             else:
-                self._channel.close()
+                self.close_channel_and_connection()
 
     def on_cancelok(self, unused_frame):
         logger.info('RabbitMQ acknowledged the cancellation of the consumer')
         self._consumer_tags.remove(unused_frame.method.consumer_tag)
         if not len(self._consumer_tags):
+            self.close_channel_and_connection()
+
+    def close_channel_and_connection(self):
+        if (
+            self._channel and
+            not self._channel.is_closed and
+            not self._channel.is_closing
+        ):
             self._channel.close()
+
+        if (
+            self._connection and
+            not self._connection.is_closed and
+            not self._connection.is_closing
+        ):
+            self._connection.close()
 
     def start(self):
         """ Creating connection object and starting event loop """
