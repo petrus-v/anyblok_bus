@@ -23,6 +23,7 @@ class Worker:
         self._channel = None
         self._closing = False
         self._consumer_tags = []
+        self.ready = False
 
     def connect(self):
         """ Creating connection object """
@@ -61,6 +62,11 @@ class Worker:
         self._channel.add_on_close_callback(self.on_channel_closed)
         for queue, model, method in self.registry.Bus.Profile.get_consumers():
             self.declare_consumer(queue, model, method)
+
+        self.ready = True
+
+    def is_ready(self):
+        return self.ready
 
     def on_channel_closed(self, channel, reply_code, reply_text):
         """ Called when channel is closed """
@@ -142,10 +148,14 @@ class Worker:
         if self._channel:
             for consumer_tag in self._consumer_tags:
                 self._channel.basic_cancel(self.on_cancelok, consumer_tag)
+            else:
+                self._channel.close()
 
     def on_cancelok(self, unused_frame):
         logger.info('RabbitMQ acknowledged the cancellation of the consumer')
-        self._channel.close()
+        self._consumer_tags.remove(unused_frame.method.consumer_tag)
+        if not len(self._consumer_tags):
+            self._channel.close()
 
     def start(self):
         """ Creating connection object and starting event loop """
@@ -156,4 +166,5 @@ class Worker:
     def stop(self):
         logger.info('stop')
         self._closing = True
+        self.ready = False
         self.stop_consuming()

@@ -16,6 +16,8 @@ import pika
 from anyblok.config import Configuration
 from contextlib import contextmanager
 from pika.exceptions import ProbableAccessDeniedError, ChannelClosed
+from anyblok_bus.worker import Worker
+from threading import Thread
 pika_url = 'amqp://guest:guest@localhost:5672/%2F'
 
 
@@ -109,4 +111,111 @@ class TestPublish(DBTestCase):
 
             method_frame, header_frame, body = channel.basic_get(
                 'unittest_queue')
-            self.assertIsNone(method_frame)
+
+
+class AnyBlokWorker(Thread):
+    def __init__(self, registry, profile):
+        super(AnyBlokWorker, self).__init__()
+        self.worker = Worker(registry, profile)
+
+    def run(self):
+        self.worker.start()
+
+    def is_consumer_ready(self):
+        return self.worker.is_ready()
+
+    def stop(self):
+        self.worker.stop()
+
+
+class TestConsumer(DBTestCase):
+
+    @classmethod
+    def init_configuration_manager(cls, **env):
+        bus_profile = Configuration.get('bus_profile') or 'unittest'
+        env.update(dict(bus_profile=bus_profile))
+        super(TestConsumer, cls).init_configuration_manager(**env)
+
+    def add_in_registry(self, schema=None):
+
+        @Declarations.register(Declarations.Model)
+        class Test:
+            id = Integer(primary_key=True)
+            label = String()
+            number = Integer()
+
+            @bus_validator(name='unittest_queue', schema=OneSchema())
+            def decorated_method(cls, body=None):
+                cls.insert(**body)
+                return MessageStatus.ACK
+
+    def test_consume_close_without_consumer(self):
+        with get_channel():
+            bus_profile = Configuration.get('bus_profile')
+            registry = self.init_registry_with_bloks(('bus',), None)
+            registry.Bus.Profile.insert(name=bus_profile, url=pika_url)
+            thread = AnyBlokWorker(registry, bus_profile)
+            thread.start()
+            while not thread.is_consumer_ready():
+                pass
+
+            thread.stop()
+            thread.join()
+
+    def test_consume_close_with_consumer(self):
+        with get_channel():
+            bus_profile = Configuration.get('bus_profile')
+            registry = self.init_registry_with_bloks(
+                ('bus',), self.add_in_registry)
+            registry.Bus.Profile.insert(name=bus_profile, url=pika_url)
+            thread = AnyBlokWorker(registry, bus_profile)
+            thread.start()
+            while not thread.is_consumer_ready():
+                pass
+
+            thread.stop()
+            thread.join()
+
+    def test_consume_ok(self):
+        with get_channel():
+            bus_profile = Configuration.get('bus_profile')
+            registry = self.init_registry_with_bloks(
+                ('bus',), self.add_in_registry)
+            registry.Bus.Profile.insert(name=bus_profile, url=pika_url)
+            thread = AnyBlokWorker(registry, bus_profile)
+            thread.start()
+            while not thread.is_consumer_ready():
+                pass
+
+            self.assertEqual(registry.Test.query().count(), 0)
+            self.assertEqual(registry.Bus.Message.query().count(), 0)
+            registry.Bus.publish('unittest_exchange', 'unittest',
+                                 dumps({'label': 'label', 'number': 1}),
+                                 'application/json')
+
+            self.assertEqual(registry.Test.query().count(), 1)
+            self.assertEqual(registry.Bus.Message.query().count(), 0)
+            thread.stop()
+            thread.join()
+
+    def test_consume_ko(self):
+        with get_channel():
+            bus_profile = Configuration.get('bus_profile')
+            registry = self.init_registry_with_bloks(
+                ('bus',), self.add_in_registry)
+            registry.Bus.Profile.insert(name=bus_profile, url=pika_url)
+            thread = AnyBlokWorker(registry, bus_profile)
+            thread.start()
+            while not thread.is_consumer_ready():
+                pass
+
+            self.assertEqual(registry.Test.query().count(), 0)
+            self.assertEqual(registry.Bus.Message.query().count(), 0)
+            registry.Bus.publish('unittest_exchange', 'unittest',
+                                 dumps({'label': 'label'}),
+                                 'application/json')
+
+            self.assertEqual(registry.Test.query().count(), 0)
+            self.assertEqual(registry.Bus.Message.query().count(), 1)
+            thread.stop()
+            thread.join()
