@@ -8,6 +8,7 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok import Declarations
 from anyblok.config import Configuration
+from .exceptions import PublishException
 import logging
 import pika
 
@@ -36,7 +37,7 @@ class Bus:
                 profile = cls.registry.Bus.Profile.query().filter_by(
                     name=profile_name
                 ).one_or_none()
-                parameters = pika.URLParameters(profile.url)
+                parameters = pika.URLParameters(profile.url.url)
                 _connection = pika.BlockingConnection(parameters)
                 channel = _connection.channel()
                 channel.confirm_delivery()

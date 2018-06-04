@@ -45,7 +45,7 @@ class Worker:
         """ Retrieve connection url """
         connection = self.profile
         if connection:
-            return connection.url
+            return connection.url.url
         raise Exception("Unknown profile")
 
     def on_connection_open(self, *a):
