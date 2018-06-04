@@ -14,7 +14,38 @@ from anyblok import Declarations
 from anyblok_bus.status import MessageStatus
 import pika
 from anyblok.config import Configuration
+from contextlib import contextmanager
+from pika.exceptions import ProbableAccessDeniedError, ChannelClosed
 pika_url = 'amqp://guest:guest@localhost:5672/%2F'
+
+
+@contextmanager
+def get_channel():
+    parameters = pika.URLParameters(pika_url)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    channel.exchange_declare('unittest_exchange', durable=True)
+    channel.queue_declare('unittest_queue', durable=True)
+    channel.queue_purge('unittest_queue')  # case of the queue exist
+    channel.queue_bind('unittest_queue', 'unittest_exchange',
+                       routing_key='unittest')
+    try:
+        while True:
+            method_frame, header_frame, body = channel.basic_get(
+                'unittest_queue')
+            if method_frame is None:
+                break
+
+        yield channel
+    finally:
+        if channel and not channel.is_closed and not channel.is_closing:
+            channel.close()
+        if (
+            connection and
+            not connection.is_closed and
+            not connection.is_closing
+        ):
+            connection.close()
 
 
 class OneSchema(Schema):
@@ -43,22 +74,39 @@ class TestPublish(DBTestCase):
                 cls.insert(**body)
                 return MessageStatus.ACK
 
-    def test_message_ok(self):
-        parameters = pika.URLParameters(pika_url)
-        connection = pika.BlockingConnection(parameters)
-        channel = connection.channel()
-        channel.exchange_declare('unittest_exchange', durable=True)
-        channel.queue_declare('unittest_queue', durable=True)
-        channel.queue_purge('unittest_queue')  # case of the queue exist
-        channel.queue_bind('unittest_queue', 'unittest_exchange',
-                           routing_key='unittest')
+    def test_publish_ok(self):
+        with get_channel() as channel:
+            bus_profile = Configuration.get('bus_profile')
+            registry = self.init_registry_with_bloks(('bus',), None)
+            registry.Bus.Profile.insert(name=bus_profile, url=pika_url)
+            registry.Bus.publish('unittest_exchange', 'unittest',
+                                 dumps({'hello': 'world'}),
+                                 'application/json')
+            method_frame, header_frame, body = channel.basic_get(
+                'unittest_queue')
+            self.assertIsNotNone(method_frame)
+
+    def test_publish_wrong_url(self):
         bus_profile = Configuration.get('bus_profile')
         registry = self.init_registry_with_bloks(('bus',), None)
-        registry.Bus.Profile.insert(name=bus_profile, url=pika_url)
-        registry.Bus.publish('unittest_exchange', 'unittest',
-                             dumps({'hello': 'world'}),
-                             'application/json')
-        method_frame, header_frame, body = channel.basic_get('unittest_queue')
-        self.assertIsNotNone(method_frame)
-        channel.close()
-        connection.close()
+        registry.Bus.Profile.insert(
+            name=bus_profile,
+            url='amqp://guest:guest@localhost:5672/%2Fwrongvhost')
+        with self.assertRaises(ProbableAccessDeniedError):
+            registry.Bus.publish('unittest_exchange', 'unittest',
+                                 dumps({'hello': 'world'}),
+                                 'application/json')
+
+    def test_publish_wrong_exchange(self):
+        with get_channel() as channel:
+            bus_profile = Configuration.get('bus_profile')
+            registry = self.init_registry_with_bloks(('bus',), None)
+            registry.Bus.Profile.insert(name=bus_profile, url=pika_url)
+            with self.assertRaises(ChannelClosed):
+                registry.Bus.publish('wrong_exchange', 'unittest',
+                                     dumps({'hello': 'world'}),
+                                     'application/json')
+
+            method_frame, header_frame, body = channel.basic_get(
+                'unittest_queue')
+            self.assertIsNone(method_frame)

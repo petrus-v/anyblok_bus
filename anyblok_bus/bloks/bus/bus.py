@@ -20,6 +20,7 @@ class Bus:
     @classmethod
     def publish(cls, exchange, routing_key, data, contenttype):
         profile_name = Configuration.get('bus_profile')
+        channel = _connection = None
         try:
             with cls.registry.begin_nested():  # savepoint
                 profile = cls.registry.Bus.Profile.query().filter_by(
