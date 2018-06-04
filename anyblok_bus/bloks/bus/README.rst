@@ -8,3 +8,8 @@
 
 Memento
 ~~~~~~~
+
+This blok define two Models:
+
+* **Model.Bus.Profile**: list the connection available to a rabbitmq server
+* **Model.Bus.Message**: Give the received message witch did not be imported correctly by the consumer

@@ -1,6 +1,7 @@
 # This file is a part of the AnyBlok / Bus api project
 #
 #    Copyright (C) 2018 Julien SZKUDLAPSKI <j.szkudlapski@sensee.com>
+#    Copyright (C) 2018 Jean-Sebastien SUZANNE <jssuzanne@anybox.fr>
 #
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
@@ -19,6 +20,15 @@ class Bus:
 
     @classmethod
     def publish(cls, exchange, routing_key, data, contenttype):
+        """Publish a message in an exchange with a routing key through
+        rabbitmq with the profile given by the anyblok configuration
+
+        :param exchange: name of the exchange
+        :param routing_key: name of the routing key
+        :param data: str or unitcode to send through rabbitmq
+        :param contenttype: the mimestype of the data
+        :exception: PublishException
+        """
         profile_name = Configuration.get('bus_profile')
         channel = _connection = None
         try:
@@ -40,7 +50,7 @@ class Bus:
                     logger.info("Message published %r->%r",
                                 exchange, routing_key)
                 else:
-                    raise Exception("Message cannot be published")
+                    raise PublishException("Message cannot be published")
         except Exception as e:
             logger.error("publishing failed with : %r", e)
             raise

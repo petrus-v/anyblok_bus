@@ -1,6 +1,7 @@
 # This file is a part of the AnyBlok / Bus api project
 #
 #    Copyright (C) 2018 Julien SZKUDLAPSKI <j.szkudlapski@sensee.com>
+#    Copyright (C) 2018 Jean-Sebastien SUZANNE <jssuzanne@anybox.fr>
 #
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
@@ -15,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 @Declarations.register(Declarations.Model.Bus)
 class Message:
-    """ Namespace Message """
     id = Integer(primary_key=True)
     content_type = String(default='application/json', nullable=False)
     message = LargeBinary(nullable=False)
@@ -26,6 +26,7 @@ class Message:
     method = String(nullable=False)
 
     def consume(self):
+        """Try to consume on message to import it in database"""
         logger.info('consume %r', self)
         error = ""
         try:
@@ -44,6 +45,7 @@ class Message:
 
     @classmethod
     def consume_all(cls):
+        """Try to consume all the message, ordered by the sequence"""
         query = cls.query().order_by(cls.sequence)
         for consumer in query.all():
             with cls.registry.begin_nested():  # savepoint

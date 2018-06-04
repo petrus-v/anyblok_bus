@@ -12,6 +12,16 @@ API doc
 **Profile**
 ```````````
 
+.. automodule:: anyblok_bus.bloks.bus.bus
+
+.. autoanyblok-declaration:: Bus
+    :members:
+    :show-inheritance:
+    :noindex:
+
+**Profile**
+```````````
+
 .. automodule:: anyblok_bus.bloks.bus.profile
 
 .. autoanyblok-declaration:: Profile
@@ -27,5 +37,14 @@ API doc
 
 .. autoanyblok-declaration:: Message
     :members:
+    :show-inheritance:
+    :noindex:
+
+**Exceptions**
+``````````````
+
+.. automodule:: anyblok_bus.bloks.bus.exceptions
+
+.. autoexception:: PublishException
     :show-inheritance:
     :noindex:
