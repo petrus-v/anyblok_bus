@@ -8,7 +8,7 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok import Declarations
 from anyblok.config import Configuration
-from .exceptions import PublishException
+from .exceptions import PublishException, TwiceQueueConsumptionException
 import logging
 import pika
 
@@ -64,3 +64,20 @@ class Bus:
                 not _connection.is_closing
             ):
                 _connection.close()
+
+    @classmethod
+    def get_consumers(cls):
+        """Return the list of the consumers"""
+        consumers = []
+        queues = []
+        for Model in cls.registry.loaded_namespaces.values():
+            for queue, consumer in Model.bus_consumers:
+                if queue in queues:
+                    raise TwiceQueueConsumptionException(
+                        "The consumation of the queue %r is already defined" % (
+                            queue))
+
+                queues.append(queue)
+                consumers.append((queue, Model, consumer))
+
+        return consumers

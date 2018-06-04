@@ -9,3 +9,7 @@
 
 class PublishException(Exception):
     """Exception Error for Publish a message through rabbitmq"""
+
+
+class TwiceQueueConsumptionException(Exception):
+    """Simple exception for configuration"""

@@ -61,7 +61,7 @@ class Worker:
         logger.info('Channel opened')
         self._channel = channel
         self._channel.add_on_close_callback(self.on_channel_closed)
-        for queue, model, method in self.registry.Bus.Profile.get_consumers():
+        for queue, model, method in self.registry.Bus.get_consumers():
             self.declare_consumer(queue, model, method)
 
         self.ready = True

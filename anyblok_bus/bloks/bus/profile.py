@@ -25,8 +25,3 @@ class Profile:
         },
         default='disconnected', nullable=False
     )
-
-    @classmethod
-    def get_consumers(cls):
-        """Return the list of the consumers"""
-        return [x for x in cls.registry.bus_consumers.values()]

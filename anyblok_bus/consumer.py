@@ -52,12 +52,11 @@ class BusConsumerPlugin(ModelPluginBase):
         :param properties: the properties declared in the model
         :param new_type_properties: param to add in a new base if need
         """
-        self.queues = []
         if 'bus_consumers' not in transformation_properties:
             transformation_properties['bus_consumers'] = {}
 
-        if not hasattr(self.registry, 'bus_consumers'):
-            self.registry.bus_consumers = {}
+        if 'bus_consumers' not in properties:
+            properties['bus_consumers'] = []
 
     def transform_base_attribute(self, attr, method, namespace, base,
                                  transformation_properties,
@@ -74,17 +73,6 @@ class BusConsumerPlugin(ModelPluginBase):
         tp = transformation_properties
         if hasattr(method, 'is_a_bus_consumer') and method.is_a_bus_consumer:
             tp['bus_consumers'][attr] = (method.queue_name, method.schema)
-            if method.queue_name in self.registry.bus_consumers:
-                raise BusConfigurationException(
-                    "The consumation of the queue %r is already defined" % (
-                        method.queue_name))
-
-            if method.queue_name in self.queues:
-                raise BusConfigurationException(
-                    "The consumation of the queue %r is already defined" % (
-                        method.queue_name))
-
-            self.queues.append(method.queue_name)
 
     def insert_in_bases(self, new_base, namespace, properties,
                         transformation_properties):
@@ -105,15 +93,5 @@ class BusConsumerPlugin(ModelPluginBase):
 
             wrapper.__name__ = consumer
             setattr(new_base, consumer, classmethod(wrapper))
-
-    def after_model_construction(self, base, namespace,
-                                 transformation_properties):
-        """Do some action with the constructed Model
-
-        :param base: the Model class
-        :param namespace: the namespace of the model
-        :param transformation_properties: the properties of the model
-        """
-        for attr in transformation_properties['bus_consumers']:
-            name, schema = transformation_properties['bus_consumers'][attr]
-            self.registry.bus_consumers[name] = (name, base, attr)
+            queue, _ = transformation_properties['bus_consumers'][consumer]
+            properties['bus_consumers'].append((queue, consumer))
