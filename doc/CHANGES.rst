@@ -11,8 +11,8 @@
 CHANGELOG
 =========
 
-0.1.0
------
+0.1.0 (2018-06-05)
+------------------
 
 * add Worker to consume the message from rabbitmq
 * add publish method to publish a message to rabbitmq

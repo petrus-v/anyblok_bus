@@ -32,5 +32,3 @@ Improve AnyBlok `AnyBlok <http://doc.anyblok.org>`_ to add comunication with bus
 AnyBlok / Bus is released under the terms of the `Mozilla Public License`.
 
 See the `latest documentation <http://doc.anyblok-bus.anyblok.org/>`_
-
-.. include:: doc/MEMENTO.rst
