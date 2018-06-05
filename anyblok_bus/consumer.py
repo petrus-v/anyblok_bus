@@ -89,7 +89,7 @@ class BusConsumerPlugin(ModelPluginBase):
                 schema = transformation_properties['bus_consumers'][consumer][
                     1]
 
-                schema.constext['registry'] = self.registry
+                schema.context['registry'] = self.registry
                 data = schema.load(loads(body))
                 return getattr(super(new_base, cls), consumer)(body=data)
 
