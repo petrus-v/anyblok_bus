@@ -30,7 +30,7 @@ In an AnyBlok Model you have to decorate a method with **bus_consumer**
             # do something
 
 
-The schema must be an instance of marshmallow.Schema, `see the marshmallow documentation<http://marshmallow.readthedocs.io/en/latest/>`_
+The schema must be an instance of marshmallow.Schema, `see the marshmallow documentation <http://marshmallow.readthedocs.io/en/latest/>`_
 
 .. note:: 
 
