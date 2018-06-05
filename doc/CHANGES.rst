@@ -13,3 +13,7 @@ CHANGELOG
 
 0.1.0
 -----
+
+* add Worker to consume the message from rabbitmq
+* add publish method to publish a message to rabbitmq
+* add **anyblok_bus.bus_consumer** add decorator to défine the consumer

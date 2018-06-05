@@ -11,6 +11,7 @@ Welcome to AnyBlok / Bus's documentation!
    :caption: Contents:
 
    FRONT.rst
+   MEMENTO.rst
    CODE.rst
    BLOKS.rst
    CHANGES.rst

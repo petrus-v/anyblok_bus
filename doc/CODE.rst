@@ -11,31 +11,45 @@
 Code
 ====
 
-Validate the method which consume the message
----------------------------------------------
+Declare a consumer on queue with a marshmallow schema
+-----------------------------------------------------
 
-.. automodule:: anyblok_bus.validator
+.. automodule:: anyblok_bus.consumer
 
 
-decorator ``bus_validator``
-```````````````````````````
-.. autofunction:: bus_validator
+decorator ``bus_consumer``
+``````````````````````````
+.. autofunction:: bus_consumer
     :noindex:
 
 
 anyblok model plugin
 ````````````````````
 
-.. autoclass:: ValidatorPlugin
+.. autoclass:: BusConsumerPlugin
     :members:
     :undoc-members:
     :show-inheritance:
     :noindex:
 
+Worker
+------
+
+.. automodule:: anyblok_bus.worker
+
+.. autoclass:: Worker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :noindex:
 
 Exceptions
 ``````````
 
 .. autoexception:: SchemaException
+    :show-inheritance:
+    :noindex:
+
+.. autoexception:: BusConfigurationException
     :show-inheritance:
     :noindex:

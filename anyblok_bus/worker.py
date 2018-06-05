@@ -13,6 +13,19 @@ logger = getLogger(__name__)
 
 
 class Worker:
+    """Define consumers to consume the queue défined in the AnyBlok registry
+    by the bus_consumer decorator
+
+    ::
+
+        worker = Worker(anyblokregistry, profilename)
+        worker.start()  # blocking loop
+        worker.is_ready()  # return True if all the consumer are started
+        worker.stop()  # stop the loop and close the connection with rabbitmq
+
+    :param registry: anyblok registry instance
+    :param profile: the name of the profile which give the url of rabbitmq
+    """
 
     def __init__(self, registry, profile, withautocommit=True):
         self.registry = registry

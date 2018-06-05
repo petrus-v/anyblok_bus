@@ -42,7 +42,7 @@ def bus_consumer(queue_name=None, schema=None):
 
 class BusConsumerPlugin(ModelPluginBase):
     """``anyblok.model.plugin`` to allow the build of the
-    ``anyblok_bus.bus_validator``
+    ``anyblok_bus.bus_consumer``
     """
 
     def initialisation_tranformation_properties(self, properties,
@@ -88,6 +88,8 @@ class BusConsumerPlugin(ModelPluginBase):
             def wrapper(cls, body=None):
                 schema = transformation_properties['bus_consumers'][consumer][
                     1]
+
+                schema.constext['registry'] = self.registry
                 data = schema.load(loads(body))
                 return getattr(super(new_base, cls), consumer)(body=data)
 
