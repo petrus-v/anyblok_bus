@@ -34,6 +34,7 @@ class Message:
             status = getattr(Model, self.method)(
                 body=self.message.decode('utf-8'))
         except Exception as e:
+            logger.exception('Error during consumation of message %r' % self.id)
             status = MessageStatus.ERROR
             error = str(e)
 

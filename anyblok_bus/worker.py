@@ -112,6 +112,7 @@ class Worker:
             try:
                 status = getattr(model, method)(body=body.decode('utf-8'))
             except Exception as e:
+                logger.exception('Error during consumation of queue %r' % queue)
                 self.registry.rollback()
                 status = MessageStatus.ERROR
                 error = str(e)
