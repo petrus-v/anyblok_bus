@@ -49,5 +49,8 @@ class Message:
         """Try to consume all the message, ordered by the sequence"""
         query = cls.query().order_by(cls.sequence)
         for consumer in query.all():
-            with cls.registry.begin_nested():  # savepoint
-                consumer.consume()
+            try:
+                with cls.registry.begin_nested():  # savepoint
+                    consumer.consume()
+            except:
+                pass
