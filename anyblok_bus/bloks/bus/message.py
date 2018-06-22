@@ -7,8 +7,9 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file,You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 from anyblok import Declarations
-from anyblok.column import Integer, String, LargeBinary, Text
+from anyblok.column import Integer, String, LargeBinary, Text, DateTime
 from anyblok_bus.status import MessageStatus
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,9 @@ logger = logging.getLogger(__name__)
 @Declarations.register(Declarations.Model.Bus)
 class Message:
     id = Integer(primary_key=True)
+    create_date = DateTime(nullable=False, default=datetime.now)
+    edit_date = DateTime(nullable=False, default=datetime.now,
+                         auto_update=True)
     content_type = String(default='application/json', nullable=False)
     message = LargeBinary(nullable=False)
     sequence = Integer(default=100, nullable=False)
